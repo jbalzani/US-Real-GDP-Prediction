@@ -1,0 +1,71 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Model with lag 1 of T10Y3M:
+Model: real_gdp_growth = alpha + Beta1*T10Y3M_lag + epsilon
+
+```{r}
+reg_lag1 <- dynlm(real_gdp_growth~T10Y3M_lag, data = combined_data_filtered_ts)
+summary(reg_lag1)
+```
+
+Conclusion: The once lagged values of T10Y3M are not significnat at the 5% level. We do not reject the null hypothesis that the value of T10Y3M cannot predict US real GDP growth 1 quarter ahead.
+
+Model with lag 2 of T10Y3M:
+Model: real_gdp_growth = alpha + Beta2*T10Y3M_lag2 + epsilon
+
+```{r}
+reg_lag2 <- dynlm(real_gdp_growth~T10Y3M_lag2, data = combined_data_filtered_ts)
+summary(reg_lag2)
+```
+
+Conclusion: The twice lagged value of T10Y3M is significant for predicting real US GDP growth at the 5% level of significance. We reject the null hypothesis.
+
+
+Model with lag 4 of T10Y3M:
+Model: real_gdp_growth = alpha + Beta4*T10Y3M_lag4 + epsilon:
+
+```{r}
+reg_lag4 <- dynlm(real_gdp_growth~T10Y3M_lag4, data = combined_data_filtered_ts)
+summary(reg_lag4)
+```
+
+Conclusion: The four times lagged values of T10Y3M are significant at the 5% level. We reject th
+
+Unrestricted Model:
+real_gdp_growth = alpha + beta1*T10Y3M_lag + beta2*T10Y3M_lag2 + beta3*T10Y3M_lag3 + beta4*T10Y3M_lag4 + epsilon, where epsilon is the eror term
+
+Test for Stationarity - Augmented Dickey-Fuller Test for Real GDP Growth:
+Model for ADF test:
+delta_real_gdp_growth = alpha + beta1*real_gdp_growth_lag + beta2*delta_real_gdp_growth_lag + epsilon
+
+```{r adf test gdp}
+reg_gdp <- dynlm(delta_real_gdp_growth~real_gdp_growth_lag + delta_real_gdp_growth_lag, data = combined_data_filtered_ts)
+summary(reg_gdp)
+```
+
+Conclusion:
+The t value of real_gdp_growth_lag is -4.373, which is below the critical value of -2.9, so we reject the null hypothesis of non-stationarity of real GDP growth. Real GDP growth is stationary.
+
+Test for Stationarity - Augmented Dickey-Fuller Test for T10Y3M:
+
+```{r adf test T10Y3M}
+reg_yield <- dynlm(delta_T10Y3M~T10Y3M_lag + delta_T10Y3M_lag, data = combined_data_filtered_ts)
+summary(reg_yield)
+```
+
+Conclusion:
+The t value of T10Y3M_lag is -3.216, which is below the critical value of -2.9, so we reject the null hypothesis of non-stationarity for T10Y3M. T10Y3M is stationary.
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,482 @@
+---
+title: "US Real GDP Growth Prediction from Lagged GDP Growth & Spread Between 10-year Treasury Constant Maturity and 3-month Treasury Constant Maturity"
+author: "John Balzani"
+date: "11/14/2019"
+output: pdf_document
+---
+
+```{r load libraries, include=FALSE}
+library(tidyverse)
+library(dynlm)
+library(lmtest)
+library(Metrics)
+library(lubridate)
+library(stargazer)
+library(broom)
+library(readr)
+library(moments)
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+
+```{r import gdp data, include=FALSE}
+A191RL1Q225SBEA <- read_csv("C:/Users/John/OneDrive/Documents/Economics Study/Econometrics/backup GDP Prediction from 10Y3M IR Difference/A191RL1Q225SBEA.csv")
+```
+
+```{r import 10Y3M data, include=FALSE}
+T10Y3M <- read_csv("C:/Users/John/OneDrive/Documents/Economics Study/Econometrics/GDP Prediction from 10Y3M IR Difference/T10Y3M.csv")
+```
+
+```{r get 1st date of each  month 10Y3M data}
+#get 1st date of each month
+T10Y3M_filtered <- T10Y3M %>% 
+  filter(T10Y3M != ".")  %>% #rem months for no yield data
+  group_by(strftime(DATE, "%Y-%m")) %>% #grp by yr and month
+  filter(DATE == min(DATE)) %>%   #1st data pt each month
+  mutate(MONTH_T10Y3M = month(DATE)) %>% #extract month
+  filter(MONTH_T10Y3M %in% c(1, 4, 7, 10)) %>% #filter for months with qtly gdp data
+  .[-152,] #remove oct 2019 data bc it isn't in gdp data
+```
+
+```{r combined data}
+#must have same number of rows first
+combined_data <- A191RL1Q225SBEA %>%
+  mutate(MONTH = T10Y3M_filtered$MONTH_T10Y3M, T10Y3M = T10Y3M_filtered$T10Y3M) %>%
+  mutate(T10Y3M = as.numeric(T10Y3M)) %>% #change from char to numeric
+  mutate(real_gdp_growth = A191RL1Q225SBEA)  %>% #rename col
+  mutate(gdp_impr = ifelse(real_gdp_growth > 0, 1, 0)) #make gdp_impr
+
+combined_data <- combined_data %>%
+  mutate(mean_gdp_impr = mean(gdp_impr, na.rm = TRUE)) %>% #make mean of gdp_impr
+  mutate(T10Y3M_lag = lag(T10Y3M), T10Y3M_lag2 = lag(T10Y3M, 2), #create lags of T10Y3M
+         T10Y3M_lag3 = lag(T10Y3M, 3), T10Y3M_lag4 = lag(T10Y3M, 4)) %>%
+  mutate(delta_real_gdp_growth = real_gdp_growth - lag(real_gdp_growth), #make 1st differences
+         delta_T10Y3M_lag = T10Y3M_lag - lag(T10Y3M_lag))
+
+combined_data <- combined_data %>%
+  mutate(delta_2nd_real_gdp_growth = delta_real_gdp_growth - lag(delta_real_gdp_growth), delta_2nd_T10Y3M_lag = delta_T10Y3M_lag - lag(delta_T10Y3M_lag)) %>% #2nd 1st differences
+  mutate(real_gdp_growth_lag = lag(real_gdp_growth))  %>% #make lag of gdp growth
+  mutate(delta_real_gdp_growth_lag = real_gdp_growth_lag - lag(real_gdp_growth_lag)) #make 1st difference of real gdp growth lagged
+
+combined_data <- combined_data %>%
+  mutate(delta_T10Y3M = T10Y3M - lag(T10Y3M))  %>% #make delta T10Y3M
+  mutate(real_gdp_growth_lag2 = lag(real_gdp_growth, 2)) %>% #make lag 2 of gdp growth
+  mutate(real_gdp_growth_lag3 = lag(real_gdp_growth, 3)) %>% #make lag 3 of gdp growth
+  mutate(real_gdp_growth_lag4 = lag(real_gdp_growth, 4))  #make lag 4 of gdp growth
+
+#create first differences of lagged values 2-4 of real_gdp_growth
+combined_data <- combined_data %>%
+  mutate(delta_real_gdp_growth_lag2 = real_gdp_growth_lag2 - lag(real_gdp_growth_lag2)) %>%
+  mutate(delta_real_gdp_growth_lag3 = real_gdp_growth_lag3 - lag(real_gdp_growth_lag3)) %>%
+  mutate(delta_real_gdp_growth_lag4 = real_gdp_growth_lag4 - lag(real_gdp_growth_lag4))
+
+combined_data <- combined_data %>%
+  mutate(delta_T10Y3M_lag2 = T10Y3M_lag2 - lag(T10Y3M_lag2)) %>%
+  mutate(delta_T10Y3M_lag3 = T10Y3M_lag3 - lag(T10Y3M_lag3)) %>%
+  mutate(delta_T10Y3M_lag4 = T10Y3M_lag4 - lag(T10Y3M_lag4))
+```
+
+```{r filter data}
+combined_data_filtered <- combined_data %>% filter(DATE >= "1983-01-01" & DATE < "2008-07-01") #filter to include all lags and up to 2008 recession
+```
+
+Abstract: There is research to support that the spread between long-term and short-term interest rates can predict future economic growth. The purpose of this research is to explore whether or not the difference between the 10-year Treasury Constant Maturity Yield and the 3-month Treasury Constant Maturity Yield (T10Y3M) is significant in predicting US real GDP growth in the following 4 quarters above the past values of real GDP growth itself. In particular, one of the purposes of this research is to explore if these predictions can be made accurately for the 2008 recession and current post-2008 recession business cycle. Different lagged values of T10Y3M and real GDP growth are tested in an Autoregressive Distributed Lag (ADL) model and this is compared to an Autoregressive (AR) model with 4 lags of real GDP growth. Data from 1983 - April 2008 are used to estimate the model, and data after that are used to evaluate the model performance. It is found that the 1-quarter and 2-quarter lagged values of real GDP growth and the 2-quarter lagged value of the difference between the 10-year Treasury constant maturity yield and the 3-month Treasury constant maturity yield are significant in predicting US real GDP growth from 1983-2008. However, these do not accurately predict US real GDP growth from July 2008 - July 2019, with a RMSE of 2.41% annualized quarterly real growth and a MAE of 1.61%. The model predicts the recession 2 quarters too late in late 2008, and does not fully capture the quarterly variability in annualized real GDP growth. During times of more stable economic growth, such as post-2015, the model is more accurate, with a RMSE and MAE of 1.19% and 0.89% respectively for this time period.
+
+Data: \newline
+US Real GDP Growth, seasonally adjusted annual rate \newline
+Frequency: Quarterly \newline
+Source: https://fred.stlouisfed.org/series/A191RL1Q225SBEA
+
+T10Y3M: \newline
+Frequency: Daily \newline
+Source: https://fred.stlouisfed.org/series/T10Y3M \newline
+Note: T10Y3M data is confined to the data on first day of the month in which data is available. Only quarterly data matching the data on real GDP growth is used.
+
+Note: April 2008 was chosen to separate the estimation and evaluation samples because this was the latest data point before the serious recession of 2008.
+
+\newpage
+Plot of Yield Difference and Real GDP Growth:
+
+```{r plot}
+combined_data_filtered %>% ggplot(aes(x = DATE)) +
+  geom_line(aes(y = real_gdp_growth, color = "real_gdp_growth")) +
+  geom_line(aes(y = T10Y3M, color = "T10Y3M")) +
+  ggtitle("Figure 1: Real GDP Growth and T10Y3M 1983-Apr 2008")
+```
+
+
+```{r set as ts object}
+combined_data_filtered_ts <- combined_data_filtered %>% ts()
+```
+
+For the unrestricted model, the 4 most recent lagged values of T10Y3M and the 4 most recent lagged values of real GDP growth are tested. A 5% level of significance is used for all tests throughout the study.
+
+Unrestricted Model:
+
+real_gdp_growth = alpha + beta1*T10Y3M_lag + beta2*T10Y3M_lag2 + beta3*T10Y3M_lag3 + beta4*T10Y3M_lag4 + gamma1*real_gdp_growth_lag + gamma2*real_gdp_growth_lag2 + gamma3*real_gdp_growth_lag3 + gamma4*real_gdp_growth_lag4 + epsilon, where epsilon is the error term
+
+Test for Stationarity - Augmented Dickey-Fuller (ADF) Test for Real GDP Growth:
+
+First an ADF test is performed to test whether or not real GDP growth is stationary.
+
+Model for ADF test:
+delta_real_gdp_growth = alpha_adf_1 + rho*real_gdp_growth_lag + gamma_adf_1*delta_real_gdp_growth_lag + gamma_adf_2*delta_real_gdp_growth_lag2 + gamma_adf_3*delta_real_gdp_growth_lag3 + gamma_adf_4*delta_real_gdp_growth_lag4 + epsilon_adf_1
+
+Note: Starting with ADF test for all 4 lags of delta_real_gdp_growth.
+\newpage
+ADF test for lags 1-4 of delta_real_gdp_growth:
+
+```{r adf test gdp lag 4}
+reg_gdp_adf_lags1234 <- dynlm(delta_real_gdp_growth~real_gdp_growth_lag + delta_real_gdp_growth_lag + delta_real_gdp_growth_lag2 + delta_real_gdp_growth_lag3 + delta_real_gdp_growth_lag4, data = combined_data_filtered_ts)
+reg_gdp_adf_lags1234summ <- summary(reg_gdp_adf_lags1234)
+reg_gdp_adf_lags1234summ
+```
+
+Conclusion: ADF test should be repeated with lag length 3, as the absolute value of the t statistic of the last lagged value is less than 1.6.
+Rule of Thumb: Set a maximum value for the lag length, and estimate the test regression with that lag length. If the the absolute value of the last lagged value in the test regression is less than 1.6, then reduce the lag length by one and retest (Ng and Perron “Lag Length Selection and the Construction of Unit Root Tests with Good Size and Power,”
+ECTA, 2001.).
+\newpage
+ADF test with lags 1-3 of delta_real_gdp_growth:
+
+```{r adf test gdp lag 3}
+reg_gdp_adf_lags123 <- dynlm(delta_real_gdp_growth~real_gdp_growth_lag + delta_real_gdp_growth_lag + delta_real_gdp_growth_lag2 + delta_real_gdp_growth_lag3, data = combined_data_filtered_ts)
+reg_gdp_adf_lags123summ <- summary(reg_gdp_adf_lags123)
+reg_gdp_adf_lags123summ
+```
+
+Conclusion: The ADF test should be repeated with lag length 2, as the absolute value of the t statistic of the last lagged value is less than 1.6.
+\newpage
+ADF test with lags 1 and 2 of delta_real_gdp_growth:
+
+```{r adf test gdp lag 2}
+reg_gdp_adf_lags12 <- dynlm(delta_real_gdp_growth~real_gdp_growth_lag + delta_real_gdp_growth_lag + delta_real_gdp_growth_lag2, data = combined_data_filtered_ts)
+reg_gdp_adf_lags12summ <- summary(reg_gdp_adf_lags12)
+reg_gdp_adf_lags12summ
+```
+
+Conclusion: The ADF test should be repeated with lag length 1, as the absolute value of the t statistic of the last lagged value is less than 1.6.
+\newpage
+ADF test with lag 1 of delta_real_gdp_growth:
+
+```{r adf test gdp lag 1}
+reg_gdp_adf_lag1 <- dynlm(delta_real_gdp_growth~real_gdp_growth_lag + delta_real_gdp_growth_lag, data = combined_data_filtered_ts)
+reg_gdp_adf_lag1summ <- summary(reg_gdp_adf_lag1)
+reg_gdp_adf_lag1summ
+```
+
+Conclusion:
+The t value of real_gdp_growth_lag is ```r round(reg_gdp_adf_lag1summ$coefficients[2,3], 3)```, which is below the critical value of -2.9, so we reject the null hypothesis of non-stationarity of real GDP growth. Real GDP growth is stationary.
+
+Test for Stationarity - Augmented Dickey-Fuller Test for T10Y3M:
+
+Model for ADF test:
+delta_T10Y3M = alpha_adf_2 + rho1*T10Y3M_lag + beta_adf_1*delta_T10Y3M_lag + beta_adf_2*delta_T10Y3M_lag_2 + beta_adf_3*delta_T10Y3M_lag3 + 
+beta_adf_4*delta_T10Y3M_lag4 + epsilon_adf_2
+
+Note: Starting with ADF test for all 4 lags of delta_T10Y3M.
+\newpage
+ADF test for lags 1-4 of delta_T10Y3M:
+
+```{r adf test T10Y3M 4 lags}
+reg_yield_lags1234 <- dynlm(delta_T10Y3M~T10Y3M_lag + delta_T10Y3M_lag + delta_T10Y3M_lag2 + delta_T10Y3M_lag3 + delta_T10Y3M_lag4, data = combined_data_filtered_ts)
+reg_yield_lags1234summ <- summary(reg_yield_lags1234)
+reg_yield_lags1234summ
+```
+
+Conclusion: ADF test should be repeated with lag length 3, as the absolute value of the t statistic of the last lagged value is less than 1.6.
+\newpage
+ADF test for lags 1-3 of delta_T10Y3M:
+```{r adf test T10Y3M 3 lags}
+reg_yield_lags123 <- dynlm(delta_T10Y3M~T10Y3M_lag + delta_T10Y3M_lag + delta_T10Y3M_lag2 + delta_T10Y3M_lag3, data = combined_data_filtered_ts)
+reg_yield_lags123summ <- summary(reg_yield_lags123)
+reg_yield_lags123summ
+```
+
+Conclusion:
+The t value of T10Y3M_lag is ```r round(reg_yield_lags123summ$coefficients[2,3], 3)```, which is below the critical value of -2.9, so we reject the null hypothesis of non-stationarity for T10Y3M. T10Y3M is stationary.
+
+Cointegration: As the series are both stationary, no need to test for cointegration.
+
+Granger Causality Test for T10Y3M on Real GDP Growth:
+
+Next a test for Granger causality is performed to see if T10Y3M Granger-causes real GDP growth.
+
+Unrestricted model: real_gdp_growth = alpha + beta1*T10Y3M_lag + beta2*T10Y3M_lag2 + beta3*T10Y3M_lag3 + beta4*T10Y3M_lag4 + gamma1*real_gdp_growth_lag + gamma2*real_gdp_growth_lag2 + gamma3*real_gdp_growth_lag3 + gamma4*real_gdp_growth_lag4 + epsilon
+
+Restricted model: real_gdp_growth = alpha_r + gamma_r1*real_gdp_growth_lag + gamma_r2*real_gdp_growth_lag2 + gamma_r3*real_gdp_growth_lag3 + gamma_r4*real_gdp_growth_lag4 + epsilon_r
+```{r unrestricted model}
+reg_ur <- dynlm(real_gdp_growth~real_gdp_growth_lag + real_gdp_growth_lag2 + real_gdp_growth_lag3 + real_gdp_growth_lag4 + T10Y3M_lag + T10Y3M_lag2 + T10Y3M_lag3 + T10Y3M_lag4, data = combined_data_filtered_ts)
+reg_ur_summ <- summary(reg_ur)
+```
+
+```{r restricted model}
+reg_r <- dynlm(real_gdp_growth~real_gdp_growth_lag + real_gdp_growth_lag2 + real_gdp_growth_lag3 + real_gdp_growth_lag4, data = combined_data_filtered_ts)
+reg_r_summ <- summary(reg_r)
+```
+
+```{r F test}
+R1sqd <- reg_ur_summ$r.squared
+R0sqd <- reg_r_summ$r.squared
+g <- 4
+n <- nrow(combined_data_filtered_ts)
+k <- 9
+F_stat <- ((R1sqd - R0sqd)/g)/((1-R1sqd)/(n-k))
+```
+\newpage
+p value of F statistic:
+
+```{r}
+round(pf(F_stat, g, n-k, lower.tail = FALSE), 4)
+```
+
+This is above 0.05, so we cannot reject the null hypothesis that T10Y3M does not Granger cause real GDP growth at a 5% level of significance. However, since much other literature indicates that T10Y3M can predict real GDP growth, I will explore its use as a predictor.
+
+Models:
+
+Unrestricted Model with lags 1-4 of T10Y3M and real_gdp_growth:
+
+```{r}
+reg_lag_1234_1234 <- dynlm(real_gdp_growth~T10Y3M_lag + T10Y3M_lag2 + T10Y3M_lag3 + T10Y3M_lag4 + real_gdp_growth_lag + real_gdp_growth_lag2 + real_gdp_growth_lag3 + real_gdp_growth_lag4, data = combined_data_filtered_ts)
+reg_lag_1234_1234summ <- summary(reg_lag_1234_1234)
+reg_lag_1234_1234summ
+```
+
+Conclusion: Lags 1-4 of T10Y3M  and lags 3 and 4 of real GDP growth are not significant in predicting US real GDP growth in this model. As lag 1 of T10Y3M has the highest p value, it is eliminated and the model is re-estimated.
+\newpage
+Model with lags 2-4 of T10Y3M and lags 1-4 of real GDP growth:
+
+```{r}
+reg_lag_234_1234 <- dynlm(real_gdp_growth~T10Y3M_lag2 + T10Y3M_lag3 + T10Y3M_lag4 + real_gdp_growth_lag + real_gdp_growth_lag2 + real_gdp_growth_lag3 + real_gdp_growth_lag4, data = combined_data_filtered_ts)
+reg_lag_234_1234summ <- summary(reg_lag_234_1234)
+reg_lag_234_1234summ
+```
+
+Conclusion: Lag 4 of T10Y3M  and lags 3 and 4 of real GDP growth are not significant in predicting US real GDP growth in this model. As lag 4 of real GDP growth has the highest p value, it is eliminated and the model is re-estimated.
+\newpage
+Model with lags 2-4 of T10Y3M and lags 1-3 of real GDP growth:
+
+```{r}
+reg_lag_234_123 <- dynlm(real_gdp_growth~T10Y3M_lag2 + T10Y3M_lag3 + T10Y3M_lag4 + real_gdp_growth_lag + real_gdp_growth_lag2 + real_gdp_growth_lag3, data = combined_data_filtered_ts)
+reg_lag_234_123summ <- summary(reg_lag_234_123)
+reg_lag_234_123summ
+```
+
+Conclusion: Lags 3 and 4 of T10Y3M  and lag 3 of real GDP growth are not significant in predicting US real GDP growth in this model. As lag 4 of T10Y3M has the highest p value, it is eliminated and the model is re-estimated.
+\newpage
+Model with lags 2 and 3 of T10Y3M and lags 1-3 of real GDP growth:
+
+```{r}
+reg_lag_23_123 <- dynlm(real_gdp_growth~T10Y3M_lag2 + T10Y3M_lag3 + real_gdp_growth_lag + real_gdp_growth_lag2 + real_gdp_growth_lag3, data = combined_data_filtered_ts)
+reg_lag_23_123summ <- summary(reg_lag_23_123)
+reg_lag_23_123summ
+```
+
+Conclusion: Lag 3 T10Y3M  and lag 3 of real GDP growth are not significant in predicting US real GDP growth in this model. As lag 3 of T10Y3M has the highest p value, it is eliminated and the model is re-estimated.
+\newpage
+Model with lag 2 of T10Y3M and lags 1-3 of real GDP growth:
+
+```{r}
+reg_lag_2_123 <- dynlm(real_gdp_growth~T10Y3M_lag2 + real_gdp_growth_lag + real_gdp_growth_lag2 + real_gdp_growth_lag3, data = combined_data_filtered_ts)
+reg_lag_2_123summ <- summary(reg_lag_2_123)
+reg_lag_2_123summ
+```
+
+Conclusion: Lag 3 of real GDP growth is not significant in predicting US real GDP growth in this model. It is eliminated and the model is re-estimated.
+\newpage
+Model with lag 2 of T10Y3M and lags 1 and 2 of real GDP growth:
+
+```{r}
+reg_lag_2_12 <- dynlm(real_gdp_growth~T10Y3M_lag2 + real_gdp_growth_lag + real_gdp_growth_lag2, data = combined_data_filtered_ts)
+reg_lag_2_12summ <- summary(reg_lag_2_12)
+reg_lag_2_12summ
+```
+
+Conclusion: The twice lagged values of T10Y3M and once and twice lagged values of real GDP growth are jointly significant in predicting US real GDP growth at the 5% level.
+
+Autoregressive Model (AR Model):
+The ADL model is compared to an AR model of only GDP growth, in order to further explore if T10Y3M has predictive values above the past values of the real_gdp_growth time series. An AR(4) model consisting of the 4 last lagged values of real_gdp_growth is first tested. This model is equivalent to the restricted model tested earlier in the Granger causality test.
+
+real_gdp_growth = alpha_ar + gamma_ar1*real_gdp_growth_lag + gamma_ar2*real_gdp_growth_lag2 + gamma_ar3*real_gdp_growth_lag3 + gamma_ar4*real_gdp_growth_lag4 + epsilon_ar
+\newpage
+AR Model with lags 1-4 of real_gdp_growth:
+
+```{r}
+reg_ar1234 <- reg_r
+reg_ar1234summ <- reg_r_summ
+reg_ar1234summ
+```
+
+Conclusion: The 3 and 4 times lagged values of real GDP growth are not significant in predicting US real GDP growth in this model. As lag 4 has the highest p value, it is eliminated and the model is re-estimated.
+\newpage
+AR Model with lags 1-3 of real_gdp_growth:
+
+```{r}
+reg_ar123 <- dynlm(real_gdp_growth~real_gdp_growth_lag + real_gdp_growth_lag2 + real_gdp_growth_lag3, data = combined_data_filtered_ts)
+reg_ar123summ <- summary(reg_ar123)
+reg_ar123summ
+```
+
+Conclusion: The 3 times lagged values of real GDP growth is not significant in predicting US real GDP growth in this model. It is eliminated and the model is re-estimated.
+\newpage
+AR Model with lags 1-2 of real_gdp_growth:
+
+```{r}
+reg_ar12 <- dynlm(real_gdp_growth~real_gdp_growth_lag + real_gdp_growth_lag2, data = combined_data_filtered_ts)
+reg_ar12summ <- summary(reg_ar12)
+reg_ar12summ
+```
+
+Conclusion: Lags 1 and 2 of real GDP growth are significant in predicting real GDP growth at the 5% level of significance.
+
+Model Comparison:
+
+Below is a table showing the AIC and BIC values for the ADL model and the AR model.
+
+```{r AIC}
+k_adl <- 3
+n <- nrow(combined_data_filtered_ts)
+AIC_adl_model <- log(reg_lag_2_12summ$sigma^2) + 2*k_adl/n
+
+k_ar <- 2
+AIC_ar_model <- log(reg_ar12summ$sigma^2) + 2*k_ar/n
+```
+
+```{r BIC}
+BIC_adl_model <- log(reg_lag_2_12summ$sigma^2) + k_adl*log(n)/n
+BIC_ar_model <- log(reg_ar12summ$sigma^2) + k_ar*log(n)/n
+```
+
+```{r}
+model_compar_table <- as_tibble(data.frame(
+  Criteria = c("R Squared", "AIC", "BIC"),
+  'ADL Model' = c(round(reg_lag_2_12summ$r.squared, 3), round(AIC_adl_model, 3), round(BIC_adl_model, 3)),
+  'AR Model' = c(round(reg_ar12summ$r.squared, 3), round(AIC_ar_model, 3), round(BIC_ar_model, 3))
+  ))
+model_compar_table
+```
+
+Optimal Model:
+Model real_gdp_growth = alpha_final + beta_final*T10Y3M_lag2 + gamma_final_1*real_gdp_growth_lag + gamma_final_2*real_gdp_growth_lag2 + epsilon_final is the optimal model as the information criteria values are roughly equal overall and the R squared value is higher for the ADL model.
+\newpage
+A summary of the optimal model is shown again below.
+
+```{r}
+stargazer(reg_lag_2_12, type = "text")
+```
+
+
+Model Evaluation:
+
+Below is a table showing the test statistic and p value of the RESET test (p=1) and the Jarque-Bera test applied to the optimal model.
+
+```{r RESET test}
+reset_stat <- resettest(reg_lag_2_12, power = 2, type = "regressor", data = combined_data_filtered_ts)
+```
+
+```{r Jarque-Bera}
+skewness <- skewness(reg_lag_2_12summ$residuals)
+kurtosis <- kurtosis(reg_lag_2_12summ$residuals)
+JB_stat <- (sqrt(n/6)*skewness)^2 + (sqrt(n/24)*(kurtosis - 3))^2
+JB_pvalue <- pchisq(JB_stat,2)
+```
+
+```{r}
+model_eval_table <- as_tibble(data.frame(
+  Test = c("RESET (p=1)", "Jarque-Bera"),
+  'Test Statistic' = c(round(reset_stat$statistic, 3), round(JB_stat, 3)),
+  'p value' = c(round(reset_stat$p.value, 3), round(JB_pvalue, 3))
+  ))
+model_eval_table
+```
+
+The additional parameter from the RESET test is not significant, indicating that the assumption that a linear model is correct cannot be rejected. The Jarque-Bera test indicates that the null hypothesis that the distribution of normality of the residuals cannot be rejected. These test results do not signal misspecification of the model.
+
+Note: Chow break test and Chow forecast test are not done, as a plot of the data shows no evidence of a break in the data, and the test is not appropriate in this situation.
+
+Breusch-Godfrey (BG) Test for serial correlation in residuals:
+
+```{r}
+bgtest(reg_lag_2_12, order = 2, type = "Chisq")
+```
+
+As the p value is above 0.05, the null hypothesis of no serial correlation is not rejected. This test result does not signal any misspecfication of the model.
+
+US Real GDP Growth Quarterly Predictions, Annualized Rate, for Quarters 1 - 45:
+\newline
+Evaluation Sample: 2008-07-01 to 2019-07-01:
+
+```{r Evaluation Sample}
+combined_data_eval <- combined_data %>% filter(DATE >= '2008-07-01')
+```
+
+```{r generate predictions}
+growth_rate_predictions <- 1:nrow(combined_data_eval)
+
+for (i in 1:nrow(combined_data_eval)) {
+  growth_rate_predictions[i] <- as.numeric(
+    reg_lag_2_12$coefficients[1] + 
+    reg_lag_2_12$coefficients[2]*combined_data_eval[(which(combined_data_eval$DATE == "2008-07-01") + i - 1), 'T10Y3M_lag2'] +
+    reg_lag_2_12$coefficients[3]*combined_data_eval[(which(combined_data_eval$DATE == "2008-07-01") + i - 1), 'real_gdp_growth_lag'] + 
+    reg_lag_2_12$coefficients[4]*combined_data_eval[(which(combined_data_eval$DATE == "2008-07-01") + i - 1), 'real_gdp_growth_lag2']
+  )
+}
+
+round(growth_rate_predictions, 2)
+```
+
+Plot of Predicted vs. Actual Growth Rates July 2008 - July 2019:
+
+```{r graph predictions and actual growth rates}
+#add growth rate predications col
+combined_data_eval <- combined_data_eval %>%
+  mutate(growth_rate_predictions = growth_rate_predictions)
+
+#plot
+combined_data_eval %>% ggplot(aes(x = DATE)) +
+  geom_line(aes(y = real_gdp_growth, color = "real_gdp_growth")) +
+  geom_line(aes(y = growth_rate_predictions, color = "growth_rate_predictions")) +
+  geom_point(aes(y = real_gdp_growth)) +
+  geom_point(aes(y = growth_rate_predictions)) +
+  ggtitle("Figure 2: Predicted vs. Actual Real GDP Growth Rates")
+```
+
+ Root Mean Square Error (RMSE) of Predictions:
+
+```{r calculate rmse}
+RMSE <- rmse(combined_data_eval$real_gdp_growth, growth_rate_predictions)
+round(RMSE, 2)
+
+```
+
+Mean Absolute Error (MAE) of Predictions:
+
+```{r}
+#MAE calculations
+MAE <- mae(combined_data_eval$real_gdp_growth, growth_rate_predictions)
+round(MAE, 2)
+```
+
+RMSE of Predictions post-2015:
+
+```{r}
+post2015_combined_data_eval <- combined_data_eval %>%
+  filter(DATE >= '2016-01-01')
+
+post2015_growth_rate_predictions <- growth_rate_predictions[1:(45-3-12)]
+
+RMSE_post2015 <- rmse(post2015_combined_data_eval$real_gdp_growth, post2015_growth_rate_predictions)
+round(RMSE_post2015, 2)
+```
+
+MAE of Predictions post-2015:
+
+```{r}
+MAE_post2015 <- mae(post2015_combined_data_eval$real_gdp_growth, post2015_growth_rate_predictions)
+round(MAE_post2015, 2)
+```
+Conclusion:
+
+The RMSE indicates a forecasting error of about ```r round(RMSE, 2)```% on an annualized quarterly growth basis, and the MAE indicates a forecasting error of about ```r round(MAE, 2)```%. These are high, so the model using 1983-2008 data does not accurately predict real GDP growth from July 2008 - July 2019. The model predicts a recession in late 2008, after the recession was already under way. The model does not fully capture the variability in real GDP growth, but is more accurate in times of more stable economic growth. After 2015, when real GDP growth is more stable, the model becomes more accurate, with a RMSE of ```r round(RMSE_post2015, 2)``` and a MAE of ```r round(MAE_post2015, 2)```.
