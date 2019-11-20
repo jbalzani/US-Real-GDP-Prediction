@@ -1,7 +1,7 @@
 ---
 title: "US Real GDP Growth Prediction from Lagged GDP Growth & Spread Between 10-year Treasury Constant Maturity and 3-month Treasury Constant Maturity"
 author: "John Balzani"
-date: "11/14/2019"
+date: "11/19/2019"
 output: pdf_document
 ---
 
@@ -23,11 +23,11 @@ knitr::opts_chunk$set(echo = FALSE)
 
 
 ```{r import gdp data, include=FALSE}
-A191RL1Q225SBEA <- read_csv("C:/Users/John/OneDrive/Documents/Economics Study/Econometrics/backup GDP Prediction from 10Y3M IR Difference/A191RL1Q225SBEA.csv")
+A191RL1Q225SBEA <- read_csv("C:/Users/John/OneDrive/Documents/Economics Study/Econometrics/US-Real-GDP-Prediction/data/0-raw/A191RL1Q225SBEA.csv")
 ```
 
 ```{r import 10Y3M data, include=FALSE}
-T10Y3M <- read_csv("C:/Users/John/OneDrive/Documents/Economics Study/Econometrics/GDP Prediction from 10Y3M IR Difference/T10Y3M.csv")
+T10Y3M <- read_csv("C:/Users/John/OneDrive/Documents/Economics Study/Econometrics/US-Real-GDP-Prediction/data/0-raw/T10Y3M.csv")
 ```
 
 ```{r get 1st date of each  month 10Y3M data}
@@ -83,8 +83,20 @@ combined_data <- combined_data %>%
 combined_data_filtered <- combined_data %>% filter(DATE >= "1983-01-01" & DATE < "2008-07-01") #filter to include all lags and up to 2008 recession
 ```
 
-Abstract: There is research to support that the spread between long-term and short-term interest rates can predict future economic growth. The purpose of this research is to explore whether or not the difference between the 10-year Treasury Constant Maturity Yield and the 3-month Treasury Constant Maturity Yield (T10Y3M) is significant in predicting US real GDP growth in the following 4 quarters above the past values of real GDP growth itself. In particular, one of the purposes of this research is to explore if these predictions can be made accurately for the 2008 recession and current post-2008 recession business cycle. Different lagged values of T10Y3M and real GDP growth are tested in an Autoregressive Distributed Lag (ADL) model and this is compared to an Autoregressive (AR) model with 4 lags of real GDP growth. Data from 1983 - April 2008 are used to estimate the model, and data after that are used to evaluate the model performance. It is found that the 1-quarter and 2-quarter lagged values of real GDP growth and the 2-quarter lagged value of the difference between the 10-year Treasury constant maturity yield and the 3-month Treasury constant maturity yield are significant in predicting US real GDP growth from 1983-2008. However, these do not accurately predict US real GDP growth from July 2008 - July 2019, with a RMSE of 2.41% annualized quarterly real growth and a MAE of 1.61%. The model predicts the recession 2 quarters too late in late 2008, and does not fully capture the quarterly variability in annualized real GDP growth. During times of more stable economic growth, such as post-2015, the model is more accurate, with a RMSE and MAE of 1.19% and 0.89% respectively for this time period.
+\begin{center}
+Abstract
+\end{center}
 
+
+Can the spread between long-term and short-term interest rates predict future economic growth? The purpose of this research is to explore whether or not the difference between the 10-year Treasury Constant Maturity Yield and the 3-month Treasury Constant Maturity Yield (10-year 3-month yield curve) is significant in predicting US real GDP growth in the following 4 quarters, above the past values of real GDP growth itself. In particular, one of the purposes of this research is to explore if these predictions can be made accurately for the 2008 recession and current post-2008 recession business cycle. Different lagged values of the yield curve and real GDP growth are tested in an Autoregressive Distributed Lag (ADL) model, and this is compared to an Autoregressive (AR) model with 4 lags of real GDP growth. Data from 1983 - April 2008 are used to estimate the model, and data after that are used to evaluate the model performance. It is found that the 1-quarter and 2-quarter lagged values of real GDP growth and the 2-quarter lagged value of the 10-year 3-month yield curve are significant in predicting US real GDP growth from 1983-2008. However, these do not accurately predict US real GDP growth from July 2008 - July 2019, with a RMSE of 2.41% annualized quarterly real growth and a MAE of 1.61%. The model predicts the recession 2 quarters too late in late 2008, and does not fully capture the quarterly variability in annualized real GDP growth. During times of more stable economic growth, such as post-2015, the model is more accurate, with a RMSE and MAE of 1.19% and 0.89% respectively for this time period.
+\newpage
+Introduction:
+
+As yields are an indication of the market's projections of future economic growth, it would make sense that yields may predict future economic growth, and the difference between long term and short term yields may also predict future GDP growth. Past research has shown a link between the yield curve between long term and short term yields and future GDP growth. Harvey (1989) finds evidence that the yield curve between 5-year and 3-month T-bills can predict future GNP growth up to 5 quarters in the future. Estrella and Hardouvelis (1991) find that the yield curve can predict future GDP growth. However, the relationship between term spread and US GDP growth has not been the same for all time periods. Haubrich and Dombrowski (1996) find that adding the yield curve to a model of lagged GDP growth results in a worse fit for 1985-1995 data. In order to explore whether or not there is a relationship between term spread and real GDP growth with the most recent data, various ADL models were tested and compared to an AR model with 4 lags. Of particular interest was whether or not the term spread can predict real GDP growth for for the 2008 recession and current post-2008 recession business cycle, so this period was used for the estimation sample.
+
+Methodology:
+
+Below is a short description of the data used in this report.\newline
 Data: \newline
 US Real GDP Growth, seasonally adjusted annual rate \newline
 Frequency: Quarterly \newline
@@ -93,11 +105,10 @@ Source: https://fred.stlouisfed.org/series/A191RL1Q225SBEA
 T10Y3M: \newline
 Frequency: Daily \newline
 Source: https://fred.stlouisfed.org/series/T10Y3M \newline
-Note: T10Y3M data is confined to the data on first day of the month in which data is available. Only quarterly data matching the data on real GDP growth is used.
+T10Y3M data is confined to the data on first day of the month in which data is available. Only quarterly data matching the data on real GDP growth is used.
 
-Note: April 2008 was chosen to separate the estimation and evaluation samples because this was the latest data point before the serious recession of 2008.
+After tests for stationarity and Granger causality, ADL and AR models are tested for the estimation sample (Jan 1893 - Apr 2008). These models are then tested and evaluated for the evaluation sample (Jul 2008 - Jul 2019). April 2008 was chosen to separate the estimation and evaluation samples because this was the latest data point before the serious recession of 2008.
 
-\newpage
 Plot of Yield Difference and Real GDP Growth:
 
 ```{r plot}
@@ -136,8 +147,7 @@ reg_gdp_adf_lags1234summ
 ```
 
 Conclusion: ADF test should be repeated with lag length 3, as the absolute value of the t statistic of the last lagged value is less than 1.6.
-Rule of Thumb: Set a maximum value for the lag length, and estimate the test regression with that lag length. If the the absolute value of the last lagged value in the test regression is less than 1.6, then reduce the lag length by one and retest (Ng and Perron “Lag Length Selection and the Construction of Unit Root Tests with Good Size and Power,”
-ECTA, 2001.).
+Ng and Perron recommend the following process for determining the lag length for the ADF test. Set a maximum value for the lag length, and estimate the test regression with that lag length. If the the absolute value of the last lagged value in the test regression is less than 1.6, then reduce the lag length by one and retest (Ng and Perron, 2001.).
 \newpage
 ADF test with lags 1-3 of delta_real_gdp_growth:
 
@@ -480,3 +490,16 @@ round(MAE_post2015, 2)
 Conclusion:
 
 The RMSE indicates a forecasting error of about ```r round(RMSE, 2)```% on an annualized quarterly growth basis, and the MAE indicates a forecasting error of about ```r round(MAE, 2)```%. These are high, so the model using 1983-2008 data does not accurately predict real GDP growth from July 2008 - July 2019. The model predicts a recession in late 2008, after the recession was already under way. The model does not fully capture the variability in real GDP growth, but is more accurate in times of more stable economic growth. After 2015, when real GDP growth is more stable, the model becomes more accurate, with a RMSE of ```r round(RMSE_post2015, 2)``` and a MAE of ```r round(MAE_post2015, 2)```.
+\newpage
+References:
+
+Estrella, Arturo, and Gikas A. Hardouvelis. “The Term Structure as a Predictor of Real            Economic Activity.” The Journal of Finance 46, no. 2 (1991): 555–76.                          https://doi.org/10.2307/2328836.
+
+Haubrich, Joseph G., and Ann M. Dombrowski. “Predicting Real Growth Using the Yield Curve.”      Federal Reserve Bank of Cleveland Economic Review 32, no. 1 (Q1 1996): 26–35.
+
+Laurent, Robert G. “An Interest Rate-Based Indicator of Monetary Policy.” Federal Reserve Bank      of Chicago Economic Perspectives 12, no. 1 (January 1988).
+
+Ng, Serena, and Pierre Perron. “Lag Length Selection and the Construction of Unit Root Tests      with Good Size and Power.” Econometrica 69, no. 6 (2001): 1519–54.
+
+
+
