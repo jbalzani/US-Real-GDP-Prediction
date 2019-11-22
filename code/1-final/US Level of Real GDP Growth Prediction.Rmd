@@ -317,12 +317,18 @@ BIC_ar_model <- log(reg_ar12summ$sigma^2) + k_ar*log(n)/n
 ```
 
 ```{r}
-model_compar_table <- as_tibble(data.frame(
+model_compar_table <- as_tibble(
+  data.frame(
   Criteria = c("R Squared", "AIC", "BIC"),
   'ADL Model' = c(round(reg_lag_2_12summ$r.squared, 3), round(AIC_adl_model, 3), round(BIC_adl_model, 3)),
   'AR Model' = c(round(reg_ar12summ$r.squared, 3), round(AIC_ar_model, 3), round(BIC_ar_model, 3))
-  ))
-model_compar_table
+  )
+  )
+#model_compar_table
+```
+
+```{r}
+knitr::kable(model_compar_table, caption = "Model Comparison")
 ```
 
 Optitmal Model:\newline
@@ -343,12 +349,18 @@ JB_pvalue <- pchisq(JB_stat,2)
 ```
 
 ```{r}
-model_eval_table <- as_tibble(data.frame(
+model_eval_table <- as_tibble(
+  data.frame(
   Test = c("RESET (p=1)", "Jarque-Bera"),
   'Test Statistic' = c(round(reset_stat$statistic, 3), round(JB_stat, 3)),
   'p value' = c(round(reset_stat$p.value, 3), round(JB_pvalue, 3))
-  ))
-model_eval_table
+  )
+  )
+#model_eval_table
+```
+
+```{r}
+knitr::kable(model_eval_table, caption = "Model Evaluation")
 ```
 
 The additional parameter from the RESET test is not significant, indicating that the assumption that a linear model is correct cannot be rejected. The Jarque-Bera test indicates that the null hypothesis that the distribution of normality of the residuals cannot be rejected. These test results do not signal misspecification of the model.
