@@ -23,11 +23,11 @@ knitr::opts_chunk$set(echo = FALSE)
 
 
 ```{r import gdp data, include=FALSE}
-A191RL1Q225SBEA <- read_csv("C:/Users/John/OneDrive/Documents/Economics Study/Econometrics/US-Real-GDP-Prediction/data/0-raw/A191RL1Q225SBEA.csv")
+A191RL1Q225SBEA <- read_csv("C:/Users/John/OneDrive/Documents/Study of Economics/Econometrics/US-Real-GDP-Prediction/data/0-raw/A191RL1Q225SBEA.csv")
 ```
 
 ```{r import 10Y3M data, include=FALSE}
-T10Y3M <- read_csv("C:/Users/John/OneDrive/Documents/Economics Study/Econometrics/US-Real-GDP-Prediction/data/0-raw/T10Y3M.csv")
+T10Y3M <- read_csv("C:/Users/John/OneDrive/Documents/Study of Economics/Econometrics/US-Real-GDP-Prediction/data/0-raw/T10Y3M.csv")
 ```
 
 ```{r get 1st date of each  month 10Y3M data}
