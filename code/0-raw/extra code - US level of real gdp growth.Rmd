@@ -59,9 +59,58 @@ summary(reg_yield)
 Conclusion:
 The t value of T10Y3M_lag is -3.216, which is below the critical value of -2.9, so we reject the null hypothesis of non-stationarity for T10Y3M. T10Y3M is stationary.
 
+Walk-Forward Validation Attempts:
+Does Work! Same results as when not using dynlm!
+```{r test of expanding window walk-forward validation}
+#test of expanding window walk-forward validation
+set.seed(1)
+wf_predictions <- rep(NA, nrow(combined_data_eval))
 
+for (i in 1:nrow(combined_data_eval)) {
+  #set training window
+  train_window <- combined_data[1:(106 + i - 1), ]
+  train_window_ts <- ts(train_window)
+  #redo regression
+  pred_reg <- dynlm(real_gdp_growth ~ T10Y3M_lag2 + real_gdp_growth_lag + 
+                      real_gdp_growth_lag2, data = train_window_ts)
+  #predictions
+  wf_predictions[i] <- as.numeric(
+    pred_reg$coefficients[1] + 
+    pred_reg$coefficients[2]*combined_data[106 + i, 'T10Y3M_lag2'] +
+    pred_reg$coefficients[3]*combined_data[106 + i, 'real_gdp_growth_lag'] +
+    pred_reg$coefficients[4]*combined_data[106 + i, 'real_gdp_growth_lag2']
+  )
+}
+```
+```{r}
+combined_data_ts <- ts(combined_data)
+#test of expanding window walk-forward validation
+#library("forecast")
+set.seed(1)
+wf_predictions <- rep(NA, nrow(combined_data_eval))
+#wf_predictions <- vector(mode = "list", length = 10L)
+#train_window1 <- ts(combined_data, end = combined_data$qtr_num[106]) #doesn't filter
+#train_window1 <- ts(combined_data, end = 13970) #doesn't filter
 
+#doesn't work
+for (i in 1:nrow(combined_data_eval)) {
+  train_window <- combined_data_ts[1:(106 + i - 1), ]
+  #pred_window <- combined_data_ts[106 + i, ]
+  pred_reg <- dynlm(real_gdp_growth ~ T10Y3M_lag2 + real_gdp_growth_lag + real_gdp_growth_lag2, data = train_window)
+  
+  #wf_predictions[i] <- forecast(pred_reg, h = 1) doesn't work
+  #wf_predictions[i] <- predict(pred_reg, pred_window, n.ahead = 1) #doesn't work
+  wf_predictions[i] <- pred_reg$coefficients[1] + pred_reg$coefficients[2]*combined_data_ts[106 + i, 'T10Y3M_lag2'] +
+    pred_reg$coefficients[3]*combined_data_ts[106 + i, 'real_gdp_growth_lag'] +
+    pred_reg$coefficients[4]*combined_data_ts[106 + i, 'real_gdp_growth_lag2']
+}
+````
 
+```{r}
+#make train_window a list and increment it
+train_window <- vector(mode = "list", length = nrow(combined_data_eval)) #did work
+#train_window[i] <- combined_data_ts[1:(106 + i - 1), ] doesn't work with ts
+```
 
 
 
