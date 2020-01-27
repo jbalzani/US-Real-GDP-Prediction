@@ -24,7 +24,7 @@ knitr::opts_chunk$set(echo = FALSE)
 
 
 ```{r import gdp data, include=FALSE}
-A191RL1Q225SBEA <- read_csv("C:/Users/John/OneDrive/Documents/Study of Economics/Econometrics/US-Real-GDP-Prediction/data/0-raw/A191RL1Q225SBEA.csv")
+real_gdp_growth <- read_csv("C:/Users/John/OneDrive/Documents/Study of Economics/Econometrics/US-Real-GDP-Prediction/data/0-raw/A191RL1Q225SBEA.csv")
 ```
 
 ```{r import 10Y3M data, include=FALSE}
@@ -44,7 +44,7 @@ T10Y3M_filtered <- T10Y3M %>%
 
 ```{r combined data}
 #must have same number of rows first
-combined_data <- A191RL1Q225SBEA %>%
+combined_data <- real_gdp_growth %>%
   mutate(MONTH = T10Y3M_filtered$MONTH_T10Y3M, T10Y3M = T10Y3M_filtered$T10Y3M) %>%
   mutate(T10Y3M = as.numeric(T10Y3M)) %>% #change from char to numeric
   mutate(real_gdp_growth = A191RL1Q225SBEA)  %>% #rename col
