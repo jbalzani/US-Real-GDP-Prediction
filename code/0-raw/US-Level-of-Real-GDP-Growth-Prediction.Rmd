@@ -387,9 +387,9 @@ A table showing the AIC and BIC values is also presented. From this table, the G
 ```{r}
 model_compar_table <- as_tibble(
   data.frame(
-  Criteria = c("R Squared", "AIC", "BIC"),
-  'General To Specific ADL Model' = c(round(reg_lag_2_12summ$r.squared, 3), round(AIC_adl_model, 3), round(BIC_adl_model, 3)),
-  'Optimal Model AIC' = c(round(reg_lag_234_123summ$r.squared, 3), round(AIC(reg_lag_234_123), 3), round(BIC(reg_lag_234_123), 3)),
+  Criteria = c("Adjusted R Squared", "AIC", "BIC"),
+  'General To Specific ADL Model' = c(round(reg_lag_2_12summ$adj.r.squared, 3), round(AIC_adl_model, 3), round(BIC_adl_model, 3)),
+  'Optimal Model AIC' = c(round(reg_lag_234_123summ$adj.r.squared, 3), round(AIC(reg_lag_234_123), 3), round(BIC(reg_lag_234_123), 3)),
   'Optimal Model BIC' = c(round(reg_ar12summ$r.squared, 3), round(AIC(reg_ar12), 3),
                           round(BIC(reg_ar12), 3))
   )
