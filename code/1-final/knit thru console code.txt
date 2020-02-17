@@ -1,0 +1,2 @@
+must knit through console if knit button not working
+render("C:/Users/John/OneDrive/Documents/Study of Economics/Econometrics/US-Real-GDP-Prediction/code/1-final/US-Level-of-Real-GDP-Growth-Prediction-Updated.Rmd")
