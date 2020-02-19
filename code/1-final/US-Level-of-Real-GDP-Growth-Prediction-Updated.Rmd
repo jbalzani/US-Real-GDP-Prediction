@@ -5,7 +5,22 @@ date: "2/17/2020"
 output: pdf_document
 ---
 
-```{r load libraries, include=FALSE}
+```{r install packages, include=False}
+# install.packages("rmarkdown")
+# install.packages("MASS")
+# install.packages("tidyverse")
+# install.packages("dynlm")
+# install.packages("lmtest")
+# install.packages("Metrics")
+# install.packages("lubridate")
+# install.packages("stargazer")
+# install.packages("broom")
+# install.packages("readr")
+# install.packages("moments")
+# install.packages("stringi")
+```
+
+```{r load packages, include=FALSE}
 library(rmarkdown)
 library(MASS)
 library(tidyverse)
@@ -25,11 +40,11 @@ knitr::opts_chunk$set(echo = FALSE)
 
 
 ```{r import gdp data, include=FALSE}
-real_gdp_growth <- read_csv("C:/Users/John/OneDrive/Documents/Study of Economics/Econometrics/US-Real-GDP-Prediction/data/0-raw/A191RL1Q225SBEA.csv")
+real_gdp_growth <- read_csv("C:/Users/John/Documents/Study of Economics/Econometrics/US-Real-GDP-Prediction/data/0-raw/A191RL1Q225SBEA.csv")
 ```
 
 ```{r import 10Y3M data, include=FALSE}
-T10Y3M <- read_csv("C:/Users/John/OneDrive/Documents/Study of Economics/Econometrics/US-Real-GDP-Prediction/data/0-raw/T10Y3M.csv")
+T10Y3M <- read_csv("C:/Users/John/Documents/Study of Economics/Econometrics/US-Real-GDP-Prediction/data/0-raw/T10Y3M.csv")
 ```
 
 ```{r get 1st date of each  month 10Y3M data}
@@ -473,7 +488,7 @@ for (i in 1:nrow(combined_data_eval)) {
   pred_window <- combined_data[106 + i, ]
   #redo regression
   pred_reg_adl <- lm(real_gdp_growth ~ T10Y3M_lag2 + real_gdp_growth_lag + 
-                    real_gdp_growth_lag2, data = train_window2)
+                    real_gdp_growth_lag2, data = train_window_adl)
   #predictions
   wf_predictions_adl[i] <- predict(pred_reg_adl, pred_window)
   
@@ -490,9 +505,9 @@ for (i in 1:nrow(combined_data_eval)) {
   pred_window <- combined_data[106 + i, ]
   
   pred_reg_ar <- lm(real_gdp_growth ~ real_gdp_growth_lag + real_gdp_growth_lag2, 
-                  data = train_window3)
+                  data = train_window_ar)
   
-  wf_predictions_ar[i] <- predict(pred_reg3, pred_window)
+  wf_predictions_ar[i] <- predict(pred_reg_ar, pred_window)
 }
 ```
 
@@ -509,7 +524,8 @@ combined_data_eval %>% ggplot(aes(x = DATE)) +
   geom_line(aes(y = growth_rate_predictions, color = "growth_rate_predictions")) +
   geom_point(aes(y = real_gdp_growth)) +
   geom_point(aes(y = growth_rate_predictions)) +
-  ggtitle("Figure 6: ADL(2, 1) Model Predicted vs. Actual Real GDP Growth Rates")
+  ggtitle("Figure 6: ADL(2, 1) Model Predicted vs. Actual Real GDP Growth Rates") #+
+  # ggsave("change_this_name_later.png") #this makes the file appear in Plot window, from      #there use Zoom button to get a high quality image, then right click, Copy Image, and save   #from MS Paint (best way so far)
 ```
 
 ```{r growth predictions plot for ar(2) model}
@@ -522,7 +538,8 @@ combined_data_eval %>%
   geom_line(aes(y = ar_growth_rate_predictions, color = "ar_growth_rate_predictions")) +
   geom_point(aes(y = real_gdp_growth)) +
   geom_point(aes(y = ar_growth_rate_predictions)) +
-  ggtitle("Figure 7: AR(2) Model Predicted vs. Actual Real GDP Growth")
+  ggtitle("Figure 7: AR(2) Model Predicted vs. Actual Real GDP Growth") #+
+  #ggsave("test.png") #may show below and give open image option, screenshot from there
 ```
 
 
