@@ -525,7 +525,7 @@ combined_data_eval %>% ggplot(aes(x = DATE)) +
   geom_point(aes(y = real_gdp_growth)) +
   geom_point(aes(y = growth_rate_predictions)) +
   ggtitle("Figure 6: ADL(2, 1) Model Predicted vs. Actual Real GDP Growth Rates") #+
-  # ggsave("change_this_name_later.png") #this makes the file appear in Plot window, from      #there use Zoom button to get a high quality image, then right click, Copy Image, and save   #from MS Paint (best way so far)
+   #ggsave("change_this_name_later.png") #if this makes the file appear in Plot window, from      #there use Zoom button to get a high quality image, then right click, Copy Image, and        #save from MS Paint (best way so far)
 ```
 
 ```{r growth predictions plot for ar(2) model}
@@ -539,7 +539,8 @@ combined_data_eval %>%
   geom_point(aes(y = real_gdp_growth)) +
   geom_point(aes(y = ar_growth_rate_predictions)) +
   ggtitle("Figure 7: AR(2) Model Predicted vs. Actual Real GDP Growth") #+
-  #ggsave("test.png") #may show below and give open image option, screenshot from there
+  #ggsave("test.png") #may show below and give open image option, screenshot directly from     there for highest quality image, copy image and save from paint if you need 2 images
+  #of the same size
 ```
 
 
