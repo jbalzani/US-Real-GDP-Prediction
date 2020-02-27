@@ -1,0 +1,8 @@
+Rstudio version 1.1.463 
+issues only in rmarkdown with lags when typing, moving scroll bar
+fix is to right click on application -> properties -> Compatibility tab -> change high DPI settings
+-> override high dpi scaling behavior -> scaling performed by system (enhanced) 
+Then restart Rstudio
+This will make the graphs extra large so you won't be able to see the whole graph.
+I could turn this option off to see what the graphs are like, and then when I know the graphs are good, turn it back on.
+Works as a short-term fix until I can get a more recent version of Rstudio which has a permanent fix.
